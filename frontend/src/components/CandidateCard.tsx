@@ -1,0 +1,5 @@
+import { MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import { Card, Space, Tag, Typography } from 'antd';
+import { Link } from 'react-router-dom';
+import { statusText } from '../constants/enums';
+export default function CandidateCard({ candidate }: { candidate: Candidate }) { const resume = candidate.resumes?.[0]; const scores = resume?.interviews?.map((i) => i.score).filter(Boolean) as number[] | undefined; return <Card className="candidate-card tf-card" size="small" title={<Link to={`/candidates/${candidate.id}`}>{candidate.name}</Link>} extra={<Tag>{candidate.source}</Tag>}><Space direction="vertical" size={4}><Typography.Text type="secondary"><MailOutlined/> {candidate.email}</Typography.Text>{candidate.phone && <Typography.Text type="secondary"><PhoneOutlined/> {candidate.phone}</Typography.Text>}<Space><Tag color="green">{statusText[resume?.status || 'SUBMITTED']}</Tag>{scores?.length ? <Tag color="gold">最近评分 {scores[scores.length - 1]}</Tag> : <Tag>暂无评分</Tag>}</Space></Space></Card>; }

@@ -1,0 +1,50 @@
+name: ldtalentflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-ldtalentflow}-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-talentflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-talentflow}
+      POSTGRES_DB: ${DB_NAME:-talentflow}
+    ports:
+      - "${DB_PORT:-54322}:5432"
+    volumes:
+      - talentflow_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-talentflow} -d ${DB_NAME:-talentflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-ldtalentflow}-backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://talentflow:talentflow@postgres:5432/talentflow?schema=public}
+      JWT_SECRET: ${JWT_SECRET:-talentflow-secret}
+      PORT: 38502
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-38502}:38502"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:38502/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-ldtalentflow}-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-38402}:80"
+volumes:
+  talentflow_pg:

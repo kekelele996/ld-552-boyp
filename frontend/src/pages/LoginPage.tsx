@@ -1,0 +1,4 @@
+import { Button, Card, Form, Input, Typography, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+export default function LoginPage() { const login = useAuthStore((s)=>s.login); const nav = useNavigate(); return <div className="login"><section className="login-copy"><h1>TalentFlow</h1><p>招聘团队的职位、候选人、面试与 Offer 协作台。</p><p>默认账号：admin@talentflow.local / talentflow123</p></section><section className="login-panel"><Card title="登录招聘工作台"><Form layout="vertical" initialValues={{email:'admin@talentflow.local',password:'talentflow123'}} onFinish={async(v)=>{try{await login(v.email,v.password);nav('/jobs')}catch{message.error('登录失败')}}}><Form.Item label="邮箱" name="email"><Input/></Form.Item><Form.Item label="密码" name="password"><Input.Password/></Form.Item><Button type="primary" htmlType="submit" block>进入 TalentFlow</Button></Form></Card></section></div>; }

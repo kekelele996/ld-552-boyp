@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+  ARCHIVED
+}
+
+enum ResumeStatus {
+  SUBMITTED
+  SCREENING
+  SHORTLISTED
+  INTERVIEWING
+  OFFERED
+  HIRED
+  REJECTED
+}
+
+enum InterviewResult {
+  PASS
+  FAIL
+  PENDING
+}
+
+enum OfferStatus {
+  DRAFT
+  APPROVED
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum InterviewType {
+  PHONE
+  ONSITE
+  VIDEO
+  TECHNICAL
+}
+
+enum UserRole {
+  HR
+  INTERVIEWER
+  HIRING_MANAGER
+  ADMIN
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  name           String
+  email          String     @unique
+  passwordHash   String
+  role           UserRole
+  department     String?
+  managedJobs    Job[]      @relation("HiringManagerJobs")
+  interviews     Interview[]
+  approvedOffers Offer[]    @relation("OfferApprover")
+  auditLogs      AuditLog[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Job {
+  id              Int       @id @default(autoincrement())
+  title           String
+  department      String
+  location        String
+  salaryRange     String
+  description     String    @db.Text
+  requirements    String    @db.Text
+  headcount       Int
+  status          JobStatus
+  hiringManagerId Int
+  hiringManager   User      @relation("HiringManagerJobs", fields: [hiringManagerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  resumes         Resume[]
+  offers          Offer[]
+}
+
+model Candidate {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  phone     String?
+  source    String
+  resumes   Resume[]
+  offers    Offer[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Resume {
+  id          Int          @id @default(autoincrement())
+  candidateId Int
+  jobId       Int
+  resumeUrl   String
+  coverLetter String?      @db.Text
+  status      ResumeStatus
+  submittedAt DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  candidate   Candidate    @relation(fields: [candidateId], references: [id])
+  job         Job          @relation(fields: [jobId], references: [id])
+  interviews  Interview[]
+}
+
+model Interview {
+  id            Int             @id @default(autoincrement())
+  resumeId      Int
+  interviewerId Int
+  round         Int
+  scheduledAt   DateTime
+  duration      Int
+  type          InterviewType
+  feedback      String?         @db.Text
+  score         Int?
+  result        InterviewResult
+  notes         String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  resume        Resume          @relation(fields: [resumeId], references: [id])
+  interviewer   User            @relation(fields: [interviewerId], references: [id])
+}
+
+model Offer {
+  id          Int         @id @default(autoincrement())
+  candidateId Int
+  jobId       Int
+  salary      Decimal
+  startDate   DateTime
+  status      OfferStatus
+  approverId  Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  candidate   Candidate   @relation(fields: [candidateId], references: [id])
+  job         Job         @relation(fields: [jobId], references: [id])
+  approver    User        @relation("OfferApprover", fields: [approverId], references: [id])
+}
+
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  actorId      Int?
+  actor        User?    @relation(fields: [actorId], references: [id])
+  action       String
+  entity       String
+  entityId     Int
+  beforeStatus String?
+  afterStatus  String?
+  reason       String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  candidateId  Int?
+}
