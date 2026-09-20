@@ -79,6 +79,8 @@ model Job {
   requirements    String    @db.Text
   headcount       Int
   status          JobStatus
+  closedByHeadcount Boolean @default(false) // 是否因有效 Offer 占满编制而自动关闭（仅此类岗位可在释放名额时恢复）
+  occupiedHeadcount Int     @default(0)    // 权威占编计数：审批原子 +1，拒绝/撤回原子 -1，绝不允许超过 headcount
   hiringManagerId Int
   hiringManager   User      @relation("HiringManagerJobs", fields: [hiringManagerId], references: [id])
   createdAt       DateTime  @default(now())
@@ -111,6 +113,7 @@ model Resume {
   candidate   Candidate    @relation(fields: [candidateId], references: [id])
   job         Job          @relation(fields: [jobId], references: [id])
   interviews  Interview[]
+  offer       Offer?       @relation("OfferResume")
 }
 
 model Interview {
@@ -135,6 +138,7 @@ model Offer {
   id          Int         @id @default(autoincrement())
   candidateId Int
   jobId       Int
+  resumeId    Int?       @unique // 审批通过时转入 Offer 阶段（OFFERED）的那份简历
   salary      Decimal
   startDate   DateTime
   status      OfferStatus
@@ -143,6 +147,7 @@ model Offer {
   updatedAt   DateTime    @updatedAt
   candidate   Candidate   @relation(fields: [candidateId], references: [id])
   job         Job         @relation(fields: [jobId], references: [id])
+  resume      Resume?     @relation("OfferResume", fields: [resumeId], references: [id])
   approver    User        @relation("OfferApprover", fields: [approverId], references: [id])
 }
 

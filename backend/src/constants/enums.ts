@@ -4,3 +4,6 @@ export enum InterviewResult { PASS = 'PASS', FAIL = 'FAIL', PENDING = 'PENDING' 
 export enum OfferStatus { DRAFT = 'DRAFT', APPROVED = 'APPROVED', SENT = 'SENT', ACCEPTED = 'ACCEPTED', REJECTED = 'REJECTED', WITHDRAWN = 'WITHDRAWN' }
 export enum InterviewType { PHONE = 'PHONE', ONSITE = 'ONSITE', VIDEO = 'VIDEO', TECHNICAL = 'TECHNICAL' }
 export enum UserRole { HR = 'HR', INTERVIEWER = 'INTERVIEWER', HIRING_MANAGER = 'HIRING_MANAGER', ADMIN = 'ADMIN' }
+
+/** 占用编制的 Offer 状态：DRAFT 不占编，REJECTED/WITHDRAWN 释放名额 */
+export const OFFER_OCCUPYING_STATUSES: OfferStatus[] = [OfferStatus.APPROVED, OfferStatus.SENT, OfferStatus.ACCEPTED];

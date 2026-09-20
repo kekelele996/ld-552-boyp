@@ -43,6 +43,12 @@ frontend/
 - 候选人 Candidate + 简历 Resume：候选人检索、投递记录、简历状态推进、看板拖拽流转。
 - 面试 Interview：日历视图、安排面试、面试官反馈、评分和结果记录。
 - Offer：创建草稿、审批、发送、接受/拒绝/撤回状态机。
+- Offer 名额审批闭环：
+  - 仅本部门 **HIRING_MANAGER**（及 ADMIN）可审批 **DRAFT**；越权（他部门）、HR/面试官审批返回 403。
+  - 审批是**单数据库事务**：原子占编（`Job.occupiedHeadcount + 1`，条件更新保证不超编）→ 简历转入 `OFFERED` → Offer 变 `APPROVED` → 写审计，任一步失败整体回滚，不占名额、不改状态。
+  - 有效 Offer（`APPROVED/SENT/ACCEPTED`，DRAFT 不占编）占满编制时，岗位自动 `CLOSED` 并标记 `closedByHeadcount`；拒绝 `REJECTED` 或撤回 `WITHDRAWN` 原子释放名额，**仅**因满编自动关闭的岗位在仍有名额时恢复 `OPEN`，手动关闭的岗位不恢复。
+  - 并发审批同一剩余名额：同职位事务经职位级咨询锁串行 + 数据库条件更新与 `CHECK (0 <= occupiedHeadcount <= headcount)` 双重兜底，只有一个成功，其余返回 400/409 且全部不生效。
+  - 候选人详情页展示每个 Offer 是否占用名额及职位的已占用/剩余名额，职位列表与详情同样展示；名额以数据库权威计数为准，刷新一致。
 - RBAC：HR、INTERVIEWER、HIRING_MANAGER、ADMIN 四类角色；后端 `@Roles()` 控制接口，前端菜单和按钮按角色显示。
 - 数据范围：面试官请求面试列表时仅返回分配给自己的面试；招聘经理按部门过滤职位。
 - 操作审计：职位、简历、面试、Offer 状态变更写入 `audit_logs`，管理员可在候选人详情页查看状态流转历史。
@@ -97,7 +103,7 @@ docker compose up --build
 - `GET /api/candidates/:id/resumes`、`GET /api/candidates/:id/interviews`、`GET /api/candidates/:id/offers`
 - `POST /api/resumes`、`PATCH /api/resumes/:id/status`
 - `GET /api/interviews?startDate=&endDate=&interviewerId=`、`POST /api/interviews`、`PATCH /api/interviews/:id`
-- `POST /api/offers`、`PATCH /api/offers/:id/status`
+- `POST /api/offers`、`PATCH /api/offers/:id/status`（`APPROVED` 审批占编；`REJECTED`/`WITHDRAWN` 释放名额；响应含 `headcount: { headcount, occupied, remaining, jobClosed?/reopened? }` 与 `audited: true`）
 - `GET /api/audit-logs`、`GET /api/audit-logs/candidate/:id`
 
 ## 枚举使用位置清单

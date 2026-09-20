@@ -12,6 +12,8 @@ export class AuditLogInterceptor implements NestInterceptor {
     return next.handle().pipe(tap(async (payload: any) => {
       const entity = this.detectEntity(req.path);
       if (!entity || !afterStatus) return;
+      // 编制占用相关的 Offer 流转（审批/拒绝/撤回）已在同一数据库事务内写入审计，这里不再重复记录
+      if (payload?.audited === true) return;
       const entityId = Number(req.params?.id || payload?.id || payload?.resumeId || payload?.offerId || 0);
       const finalAfter = payload?.status ?? payload?.result ?? afterStatus;
       const finalBefore = beforeStatus ?? payload?.beforeStatus;
