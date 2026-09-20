@@ -43,6 +43,12 @@ frontend/
 - 候选人 Candidate + 简历 Resume：候选人检索、投递记录、简历状态推进、看板拖拽流转。
 - 面试 Interview：日历视图、安排面试、面试官反馈、评分和结果记录。
 - Offer：创建草稿、审批、发送、接受/拒绝/撤回状态机。
+- Offer 名额审批闭环：
+  - 招聘经理只能审批本部门、未满编岗位的草稿 Offer（HR/面试官不可审批，跨部门 403）。
+  - 审批通过、占编、简历转入 Offer 阶段、审计写入在同一数据库事务内完成，任一步失败（超编/越权/简历状态不可流转）整体回滚不生效。
+  - 有效 Offer（APPROVED/SENT/ACCEPTED）占满编制时岗位自动关闭（记录 `closedReason=HEADCOUNT_FULL`）；拒绝或撤回释放名额，仅因满编关闭的岗位自动恢复开放，手动关闭的岗位不受影响。
+  - 通过对岗位行加 `FOR UPDATE` 锁串行化审批，并发抢占同一剩余名额只会成功一次。
+  - 候选人详情页（投递记录、Offer 状态）与职位详情页实时显示编制/已占用/剩余名额，每次请求按数据库实时计算，刷新一致。
 - RBAC：HR、INTERVIEWER、HIRING_MANAGER、ADMIN 四类角色；后端 `@Roles()` 控制接口，前端菜单和按钮按角色显示。
 - 数据范围：面试官请求面试列表时仅返回分配给自己的面试；招聘经理按部门过滤职位。
 - 操作审计：职位、简历、面试、Offer 状态变更写入 `audit_logs`，管理员可在候选人详情页查看状态流转历史。
@@ -97,7 +103,7 @@ docker compose up --build
 - `GET /api/candidates/:id/resumes`、`GET /api/candidates/:id/interviews`、`GET /api/candidates/:id/offers`
 - `POST /api/resumes`、`PATCH /api/resumes/:id/status`
 - `GET /api/interviews?startDate=&endDate=&interviewerId=`、`POST /api/interviews`、`PATCH /api/interviews/:id`
-- `POST /api/offers`、`PATCH /api/offers/:id/status`
+- `POST /api/offers`、`PATCH /api/offers/:id/status`（审批闭环：审批/占编/简历流转/审计同事务，响应携带 `slotInfo` 名额信息）
 - `GET /api/audit-logs`、`GET /api/audit-logs/candidate/:id`
 
 ## 枚举使用位置清单

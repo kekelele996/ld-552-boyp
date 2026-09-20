@@ -10,6 +10,8 @@ export class AuditLogInterceptor implements NestInterceptor {
     const beforeStatus = req.body?.beforeStatus;
     const afterStatus = req.body?.status ?? req.body?.result;
     return next.handle().pipe(tap(async (payload: any) => {
+      // 审批闭环等事务内已写入审计的响应直接跳过，避免重复记录
+      if (payload?.auditRecorded) return;
       const entity = this.detectEntity(req.path);
       if (!entity || !afterStatus) return;
       const entityId = Number(req.params?.id || payload?.id || payload?.resumeId || payload?.offerId || 0);

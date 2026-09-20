@@ -79,6 +79,7 @@ model Job {
   requirements    String    @db.Text
   headcount       Int
   status          JobStatus
+  closedReason    String?   // HEADCOUNT_FULL = 因满编自动关闭，手动关闭为 null
   hiringManagerId Int
   hiringManager   User      @relation("HiringManagerJobs", fields: [hiringManagerId], references: [id])
   createdAt       DateTime  @default(now())
